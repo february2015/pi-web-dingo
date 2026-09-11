@@ -41,8 +41,9 @@ function getOrigin(): string {
 async function probeDashboard(origin: string): Promise<boolean> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+  const url = `${origin}/api/sessions`;
   try {
-    const res = await fetch(`${origin}/api/sessions`, {
+    const res = await fetch(url, {
       credentials: "include",
       signal: controller.signal,
     });
@@ -54,7 +55,15 @@ async function probeDashboard(origin: string): Promise<boolean> {
     if (Array.isArray(parsed)) return true;
     if (parsed && typeof parsed === "object") {
       const obj = parsed as Record<string, unknown>;
-      return Array.isArray(obj.sessions);
+      // Accepted shapes: { sessions: [...] }, { data: [...] }, or any
+      // single-key object whose value is an array. The dashboard
+      // wraps its payload as { success: true, data: [...] }.
+      for (const key of ["sessions", "data"]) {
+        if (Array.isArray(obj[key])) return true;
+      }
+      for (const v of Object.values(obj)) {
+        if (Array.isArray(v)) return true;
+      }
     }
     return false;
   } catch {
