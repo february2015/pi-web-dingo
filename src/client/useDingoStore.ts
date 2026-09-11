@@ -177,6 +177,73 @@ export function subscribe(listener: (s: readonly DashboardSession[]) => void): (
   };
 }
 
+// --- Module-level URL tracking (shared across all hook instances) -----
+
+let _currentPath: string =
+  typeof window !== "undefined" ? window.location.pathname : "";
+let _urlSubscribers = new Set<(path: string) => void>();
+let _pushStatePatched = false;
+let _origPushState: typeof history.pushState | null = null;
+let _origReplaceState: typeof history.replaceState | null = null;
+
+function notifyUrlSubscribers(): void {
+  const next = currentLocationKey();
+  if (next === _currentPath) return;
+  _currentPath = next;
+  for (const sub of _urlSubscribers) sub(_currentPath);
+}
+
+/**
+ * Read the full URL identity (path + hash + search) into a single
+ * string. Any change in any part triggers subscribers.
+ */
+function currentLocationKey(): string {
+  if (typeof window === "undefined") return "";
+  return window.location.pathname + window.location.search + window.location.hash;
+}
+
+function patchHistory(): void {
+  if (_pushStatePatched) return;
+  if (typeof window === "undefined") return;
+  _pushStatePatched = true;
+  _origPushState = history.pushState.bind(history);
+  _origReplaceState = history.replaceState.bind(history);
+  history.pushState = function (
+    this: History,
+    ...args: Parameters<typeof history.pushState>
+  ): void {
+    const ret = _origPushState!.apply(this, args);
+    notifyUrlSubscribers();
+    return ret as unknown as void;
+  };
+  history.replaceState = function (
+    this: History,
+    ...args: Parameters<typeof history.replaceState>
+  ): void {
+    const ret = _origReplaceState!.apply(this, args);
+    notifyUrlSubscribers();
+    return ret as unknown as void;
+  };
+  window.addEventListener("popstate", notifyUrlSubscribers);
+  // Hash-only routers (Vue Router default hash mode, etc.) don't call
+  // pushState at all — they just change `window.location.hash`. The
+  // `hashchange` event covers that case.
+  window.addEventListener("hashchange", notifyUrlSubscribers);
+  // Fallback poll at 250 ms: catches routers that mutate location in
+  // some other way (e.g. directly assigning `window.history.state`,
+  // or using a custom navigation library that bypasses the standard
+  // History API). Cheap — only notifies if the key changed.
+  setInterval(notifyUrlSubscribers, 250);
+}
+
+function subscribeUrl(sub: (path: string) => void): () => void {
+  patchHistory();
+  _urlSubscribers.add(sub);
+  return () => {
+    _urlSubscribers.delete(sub);
+  };
+}
+
 // --- React hooks ----------------------------------------------------------
 
 /** Reactive list of all dashboard sessions, sorted stable by id. */
@@ -188,25 +255,13 @@ export function useDingoSessions(): DashboardSession[] {
 
 /** Convenience: derive the currently-active session id from the URL. */
 export function useActiveSessionId(): string | null {
-  const [path, setPath] = React.useState(
-    typeof window !== "undefined" ? window.location.pathname : "",
-  );
-  React.useEffect(() => {
-    if (typeof window === "undefined") return;
-    const onChange = () => setPath(window.location.pathname);
-    window.addEventListener("popstate", onChange);
-    const origPush = history.pushState;
-    history.pushState = function (...args: Parameters<typeof origPush>) {
-      const ret = origPush.apply(this, args);
-      onChange();
-      return ret;
-    };
-    return () => {
-      window.removeEventListener("popstate", onChange);
-      history.pushState = origPush;
-    };
-  }, []);
-  const m = path.match(/^\/session\/([^/]+)/);
+  const [key, setKey] = React.useState<string>(_currentPath);
+  React.useEffect(() => subscribeUrl(setKey), []);
+  // `key` is pathname + search + hash; we only inspect pathname to
+  // extract the session id, but we keep the rest in the value so
+  // hash-only and query-string-only routers also trigger updates.
+  const pathname = key ? key.replace(/[?#].*$/, "") : "";
+  const m = pathname.match(/^\/session\/([^/]+)/);
   return m ? decodeURIComponent(m[1]) : null;
 }
 
