@@ -1,0 +1,26 @@
+{
+  "name": "pi-web-dingo",
+  "version": "1.0.0",
+  "description": "Chrome extension: real-time pi session watcher with chime and quick navigation.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@blackbelt-technology/pi-dashboard-shared": "^0.8.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.270",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "typescript": "^5.9.0",
+    "vite": "^6.0.0"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "extensionName": {
+    "message": "pi Web Dingo",
+    "description": "扩展名称，显示在 chrome://extensions 和工具栏提示。"
+  },
+  "extensionDescription": {
+    "message": "实时监控多个 pi session。在 pi dashboard 上叠加一个 session 状态面板；session 结束或需要你处理时会有提示音。",
+    "description": "扩展描述，显示在 chrome://extensions 和应用商店。"
+  },
+  "pillAriaLabelAllNormal": {
+    "message": "dingo · 全部正常",
+    "description": "没有需要关注的 session 时，pill 的 aria-label。"
+  },
+  "pillAriaLabelAttention": {
+    "message": "dingo · 共 $TOTAL$ 个会话，其中 $ATTENTION$ 个需关注",
+    "description": "至少有 1 个 session 需要关注时 pill 的 aria-label。$TOTAL$ = 可见 session 总数，$ATTENTION$ = 全部非 normal 桶计数之和。",
+    "placeholders": {
+      "TOTAL": { "content": "$1", "example": "12" },
+      "ATTENTION": { "content": "$2", "example": "3" }
+    }
+  },
+  "pillTitleHint": {
+    "message": "dingo · 悬停展开 / 单击固定 / 拖动移动",
+    "description": "pill 的 title 属性，长悬停时作为原生 tooltip 显示。"
+  }
+}

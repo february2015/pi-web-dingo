@@ -1,0 +1,609 @@
+/* pi Web Dingo — styles for the floating pill + panel.
+ *
+ * CSS is self-contained: every selector is namespaced with `.dingo-` so
+ * the plugin cannot leak into or be polluted by the host dashboard's
+ * styles. All styles use `all: revert` on the portal root to defensively
+ * reset inherited CSS custom properties / color-scheme from the host.
+ *
+ * Layout matches dsh-dingo's SessionCardRailCompact expanded view:
+ *   - Pill: small floating capsule at the right edge of the viewport,
+ *     vertically centered by default.
+ *   - Panel: floats next to the pill (anchored on the right), opens
+ *     downward. Cards inside are flat horizontal rows, no group headers.
+ */
+
+:root {
+  /* Color tokens must match dsh-dingo's SessionCardRailCompact palette
+     exactly, so a session that flashes red/error in the host sidebar
+     also flashes red/error in the dingo pill. */
+  --dingo-prio-1: #ef4444;  /* error    — red   (Tailwind red-500) */
+  --dingo-prio-2: #f59e0b;  /* question — amber (Tailwind amber-500) */
+  --dingo-prio-3: #a855f7;  /* draft    — purple (Tailwind purple-500) */
+  --dingo-prio-4: #22c55e;  /* answered — green (Tailwind green-500) */
+  --dingo-prio-5: #14b8a6;  /* waiting  — teal  (Tailwind teal-500) */
+  --dingo-prio-6: #22d3ee;  /* intermediate — cyan-400 */
+  --dingo-prio-7: #60a5fa;  /* running  — blue-400 */
+  --dingo-prio-8: #9ca3af;  /* normal   — gray-400 */
+
+  --dingo-bg-pill: rgba(20, 22, 28, 0.86);
+  --dingo-bg-panel: rgba(20, 22, 28, 0.97);
+  --dingo-fg: #e8e8e8;
+  --dingo-fg-muted: #9aa3b2;
+  --dingo-border: rgba(255, 255, 255, 0.08);
+  --dingo-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+  --dingo-radius: 10px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --dingo-bg-pill: rgba(255, 255, 255, 0.94);
+    --dingo-bg-panel: rgba(255, 255, 255, 0.97);
+    --dingo-fg: #1a1a1a;
+    --dingo-fg-muted: #6b7280;
+    --dingo-border: rgba(0, 0, 0, 0.08);
+    --dingo-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+  }
+}
+
+.dingo-root {
+  all: revert;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
+    "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--dingo-fg);
+}
+
+/* ============================ Pill ============================ */
+.dingo-pill {
+  position: fixed;
+  z-index: 2147483646;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  margin: 0;
+
+  background: var(--dingo-bg-pill);
+  color: var(--dingo-fg);
+  border: 2px solid #67e8f9;
+  border-radius: 999px;
+  box-shadow:
+    0 0 6px 1px rgba(103, 232, 249, 0.95),
+    0 0 14px 3px rgba(103, 232, 249, 0.65),
+    0 0 28px 6px rgba(103, 232, 249, 0.35),
+    var(--dingo-shadow);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  font-size: 12px;
+  font-weight: 600;
+  user-select: none;
+  cursor: grab;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  animation: dingo-pill-breathe 2.6s ease-in-out infinite;
+}
+
+/**
+ * Single smooth breathing loop for the pill — drives glow intensity,
+ * shadow radius, and border tint together. All transitions go through
+ * the same 0/50/100 keyframes so the whole pill feels like it's
+ * inhaling/exhaling rather than blinking.
+ */
+@keyframes dingo-pill-breathe {
+  0%, 100% {
+    border-color: #67e8f9;
+    box-shadow:
+      0 0 4px 1px rgba(103, 232, 249, 0.55),
+      0 0 10px 2px rgba(103, 232, 249, 0.30),
+      0 0 20px 4px rgba(103, 232, 249, 0.12),
+      var(--dingo-shadow);
+  }
+  50% {
+    border-color: #a5f3fc;
+    box-shadow:
+      0 0 8px 2px rgba(103, 232, 249, 0.95),
+      0 0 18px 4px rgba(103, 232, 249, 0.70),
+      0 0 36px 8px rgba(103, 232, 249, 0.35),
+      var(--dingo-shadow);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dingo-pill {
+    animation: none;
+  }
+}
+
+.dingo-pill:hover {
+  transform: translateY(-1px);
+  animation-play-state: paused;
+  border-color: #a5f3fc;
+  box-shadow:
+    0 10px 32px rgba(0, 0, 0, 0.5),
+    0 0 10px 2px rgba(103, 232, 249, 1),
+    0 0 24px 6px rgba(103, 232, 249, 0.85),
+    0 0 48px 12px rgba(103, 232, 249, 0.45);
+}
+
+.dingo-pill.dingo-pill-dragging {
+  cursor: grabbing;
+  transform: scale(1.04);
+  transition: none;
+  animation-play-state: paused;
+  border-color: #a5f3fc;
+  box-shadow:
+    0 0 10px 2px rgba(103, 232, 249, 1),
+    0 0 24px 6px rgba(103, 232, 249, 0.85),
+    0 0 48px 12px rgba(103, 232, 249, 0.45),
+    var(--dingo-shadow);
+}
+
+.dingo-pill-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: #a5f3fc;
+  line-height: 0;
+  flex-shrink: 0;
+}
+.dingo-pill-icon svg {
+  display: block;
+}
+
+/* ── pill summary: a row of [icon + count] units, then total hint ── */
+.dingo-pill-units {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dingo-pill-unit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dingo-pill-num {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dingo-fg);
+  line-height: 1;
+}
+
+.dingo-pill-hint {
+  font-size: 11px;
+  color: var(--dingo-fg-muted);
+  font-variant-numeric: tabular-nums;
+  margin-left: 2px;
+}
+
+/* Per-bucket dot colors — must match `useDingoCounts` keys.
+   Solid color discs, NO halo/shadow — any outer glow around a small
+   dot reads as a ring rather than a filled circle, which is the wrong
+   signal. All glow/breathing is reserved for the pill's outer border. */
+.dingo-pill-dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex: none;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-indent: -9999px;
+  line-height: 0;
+  font-size: 0;
+  vertical-align: middle;
+}
+.dingo-pill-dot-error        { background: #ef4444; animation: dingo-pill-dot-pulse 1.2s ease-in-out infinite; }
+.dingo-pill-dot-question     { background: #f59e0b; animation: dingo-pill-dot-pulse 1.4s ease-in-out infinite; }
+.dingo-pill-dot-draft        { background: #a855f7; }
+.dingo-pill-dot-answered     { background: #22c55e; }
+.dingo-pill-dot-waiting      { background: #14b8a6; }
+.dingo-pill-dot-intermediate { background: #22d3ee; }
+.dingo-pill-dot-normal       { background: #9ca3af; }
+
+/* Running bucket: spinner instead of static dot. */
+.dingo-pill-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(96, 165, 250, 0.30);
+  border-top-color: #60a5fa;
+  box-sizing: border-box;
+  flex: none;
+  overflow: hidden;
+  text-indent: -9999px;
+  line-height: 0;
+  font-size: 0;
+  vertical-align: middle;
+  animation: dingo-pill-spin 0.8s linear infinite;
+}
+
+/* Brightness-only pulse — never scale or shadow, so the dot always
+   reads as a solid filled circle. */
+/* Brightness-only pulse — never scale, so the dot always reads as a
+   solid disc. opacity 1 → 0.55 → 1 makes error/question breathe. */
+@keyframes dingo-pill-dot-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+
+@keyframes dingo-pill-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dingo-pill-spinner,
+  .dingo-pill-dot-error,
+  .dingo-pill-dot-question {
+    animation: none;
+  }
+}
+
+.dingo-pill-pin {
+  font-size: 12px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================ Panel ============================ */
+/* Aligned with dsh-dingo SessionCardRailCompact's `panel` style:
+   dark translucent backdrop, no padding (cards own their own), cards
+   span the full panel width. */
+.dingo-panel {
+  position: fixed;
+  z-index: 2147483645;
+
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 260px;
+  max-width: 380px;
+  max-height: 70vh;
+  overflow-y: auto;
+
+  padding: 0;
+  background: rgba(20, 22, 28, 0.97);
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+  color: #e8e8e8;
+  font-size: 13px;
+}
+
+/* dingo-panel-header / summary / close / body were removed in the
+   redesign — panel is now just a flat card list with no chrome. */
+
+.dingo-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dingo-card-li {
+  position: relative;
+  border-radius: 8px;
+  padding: 0;
+}
+
+.dingo-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #e8e8e8;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+  text-align: left;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: filter 0.12s ease;
+}
+
+.dingo-card:hover {
+  filter: brightness(1.15);
+}
+
+/* dsh-dingo pattern: thin blue bar pinned to the card's left edge, plus
+   a small "当前" tag floated in the top-right corner. The card itself
+   keeps its own priority background — the current state is just a
+   marker, not a recolor. */
+.dingo-card-current {
+  /* Border + bg stay from the priority class. The current marker is a
+     vertical bar pinned to the card's left edge plus a small tag in
+     the top-right — both absolute, neither changes the card's color. */
+  border-color: rgba(96, 165, 250, 0.65);
+}
+
+.dingo-card-current-bar {
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 4px;
+  border-radius: 2px;
+  background: #60a5fa;
+}
+
+.dingo-card-current-tag {
+  position: absolute;
+  top: 4px;
+  right: 26px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.15);
+  padding: 1px 5px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.dingo-card-close {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: #9aa3b2;
+  font-size: 14px;
+  line-height: 16px;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.12s ease, background 0.12s ease, color 0.12s ease;
+}
+
+.dingo-card:hover .dingo-card-close {
+  opacity: 1;
+}
+
+.dingo-card-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e8e8e8;
+}
+
+/* Per-priority card chrome — borders + backgrounds copied from
+   dsh-dingo's bucketCardStyle / statusCardStyle so the color language
+   is identical between host sidebar and dingo pill/panel. */
+.dingo-card.dingo-prio-1 {
+  background: rgba(60, 25, 25, 0.92);
+  border-color: rgba(239, 68, 68, 0.60);
+}
+.dingo-card.dingo-prio-1:hover {
+  background: rgba(80, 35, 35, 0.95);
+  border-color: rgba(239, 68, 68, 0.85);
+}
+.dingo-card.dingo-prio-2 {
+  background: rgba(60, 45, 20, 0.92);
+  border-color: rgba(245, 158, 11, 0.60);
+}
+.dingo-card.dingo-prio-2:hover {
+  background: rgba(80, 60, 25, 0.95);
+  border-color: rgba(245, 158, 11, 0.85);
+}
+.dingo-card.dingo-prio-3 {
+  background: rgba(60, 30, 70, 0.92);
+  border-color: rgba(168, 85, 247, 0.70);
+}
+.dingo-card.dingo-prio-3:hover {
+  background: rgba(80, 40, 95, 0.95);
+  border-color: rgba(168, 85, 247, 0.90);
+}
+.dingo-card.dingo-prio-4 {
+  background: rgba(20, 50, 35, 0.92);
+  border-color: rgba(34, 197, 94, 0.55);
+}
+.dingo-card.dingo-prio-4:hover {
+  background: rgba(25, 70, 45, 0.95);
+  border-color: rgba(34, 197, 94, 0.80);
+}
+.dingo-card.dingo-prio-5 {
+  background: rgba(15, 55, 50, 0.92);
+  border-color: rgba(20, 184, 166, 0.70);
+}
+.dingo-card.dingo-prio-5:hover {
+  background: rgba(20, 75, 70, 0.95);
+  border-color: rgba(20, 184, 166, 0.90);
+}
+.dingo-card.dingo-prio-6 {
+  background: rgba(15, 45, 60, 0.92);
+  border-color: rgba(34, 211, 238, 0.60);
+}
+.dingo-card.dingo-prio-6:hover {
+  background: rgba(20, 60, 80, 0.95);
+  border-color: rgba(34, 211, 238, 0.85);
+}
+.dingo-card.dingo-prio-7 {
+  background: rgba(30, 41, 59, 0.92);
+  border-color: rgba(96, 165, 250, 0.55);
+}
+.dingo-card.dingo-prio-7:hover {
+  background: rgba(40, 55, 80, 0.95);
+  border-color: rgba(96, 165, 250, 0.80);
+}
+.dingo-card.dingo-prio-8 {
+  background: rgba(40, 42, 48, 0.92);
+  border-color: rgba(156, 163, 175, 0.40);
+}
+.dingo-card.dingo-prio-8:hover {
+  background: rgba(55, 58, 65, 0.95);
+  border-color: rgba(156, 163, 175, 0.65);
+}
+
+/* Card status icon — small solid-shape glyph (not a colored circle
+   with a background). Sizing mirrors dsh-dingo's iconRunning/iconDone/
+   iconConfirm/iconError/iconNormal. */
+.dingo-card-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 14px;
+  border-radius: 3px;
+  box-sizing: border-box;
+  color: var(--dingo-prio-8);
+  overflow: hidden;
+}
+
+/* running: spinner ring, transparent center, no glyph */
+.dingo-card.dingo-prio-7 .dingo-card-icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(120, 140, 180, 0.4);
+  border-top-color: var(--dingo-prio-7);
+  background: transparent;
+  color: transparent;
+  animation: dingo-pill-spin 0.8s linear infinite;
+}
+
+/* answered: solid green rounded square, no glyph */
+.dingo-card.dingo-prio-4 .dingo-card-icon {
+  background: var(--dingo-prio-4);
+  color: transparent;
+}
+
+/* question: amber circle with black "?" */
+.dingo-card.dingo-prio-2 .dingo-card-icon {
+  border-radius: 50%;
+  background: rgba(245, 158, 11, 0.9);
+  color: #1a1a1a;
+}
+
+/* error: red circle with white "!" */
+.dingo-card.dingo-prio-1 .dingo-card-icon {
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.9);
+  color: #ffffff;
+}
+
+/* draft / waiting / intermediate: solid colored chip with a glyph */
+.dingo-card.dingo-prio-3 .dingo-card-icon { background: rgba(168, 85, 247, 0.85); color: #ffffff; }
+.dingo-card.dingo-prio-5 .dingo-card-icon { background: rgba(20, 184, 166, 0.85); color: #ffffff; }
+.dingo-card.dingo-prio-6 .dingo-card-icon { background: rgba(34, 211, 238, 0.85); color: #ffffff; }
+
+/* normal: small grey dot, no glyph */
+.dingo-card.dingo-prio-8 .dingo-card-icon {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--dingo-prio-8);
+  color: transparent;
+}
+
+.dingo-card-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dingo-card-ws {
+  font-size: 11px;
+  color: #9aa3b2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dingo-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e8e8e8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dingo-card-meta {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding-right: 6px;
+  color: #9aa3b2;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dingo-card-unread-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dingo-prio-4);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25);
+}
+
+.dingo-card-time {
+  white-space: nowrap;
+}
+
+.dingo-empty {
+  padding: 18px 12px;
+  text-align: center;
+  color: var(--dingo-fg-muted);
+  font-size: 12px;
+}
+
+/* Pulse on attention-worthy sessions — amplify the existing glow. */
+@keyframes dingo-prio-1-pulse {
+  0%, 100% {
+    box-shadow: 0 0 6px 0 rgba(239, 68, 68, 0.35);
+    border-color: var(--dingo-prio-1);
+  }
+  50% {
+    box-shadow: 0 0 16px 3px rgba(239, 68, 68, 0.75);
+    border-color: #fca5a5;
+  }
+}
+
+@keyframes dingo-prio-2-pulse {
+  0%, 100% {
+    box-shadow: 0 0 6px 0 rgba(249, 115, 22, 0.32);
+    border-color: var(--dingo-prio-2);
+  }
+  50% {
+    box-shadow: 0 0 14px 3px rgba(249, 115, 22, 0.70);
+    border-color: #fdba74;
+  }
+}
+
+.dingo-card.dingo-prio-1 {
+  animation: dingo-prio-1-pulse 1.4s ease-in-out infinite;
+}
+.dingo-card.dingo-prio-2 {
+  animation: dingo-prio-2-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dingo-card.dingo-prio-1,
+  .dingo-card.dingo-prio-2 {
+    animation: none;
+  }
+}

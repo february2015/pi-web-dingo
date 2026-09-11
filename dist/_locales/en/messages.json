@@ -1,0 +1,26 @@
+{
+  "extensionName": {
+    "message": "pi Web Dingo",
+    "description": "Extension name shown in chrome://extensions and the toolbar tooltip."
+  },
+  "extensionDescription": {
+    "message": "Watch multiple pi sessions in real time. Floats a session-status panel over the pi dashboard; chimes when a session finishes and needs your input.",
+    "description": "Extension description shown in chrome://extensions and the Web Store."
+  },
+  "pillAriaLabelAllNormal": {
+    "message": "dingo · all sessions normal",
+    "description": "Pill aria-label when no session needs attention."
+  },
+  "pillAriaLabelAttention": {
+    "message": "dingo · $TOTAL$ sessions, $ATTENTION$ need attention",
+    "description": "Pill aria-label when at least one session needs attention. $TOTAL$ = total visible sessions, $ATTENTION$ = sum of all non-normal bucket counts.",
+    "placeholders": {
+      "TOTAL": { "content": "$1", "example": "12" },
+      "ATTENTION": { "content": "$2", "example": "3" }
+    }
+  },
+  "pillTitleHint": {
+    "message": "dingo · hover to expand / click to pin / drag to move",
+    "description": "Pill title attribute — surfaced as native tooltip on long-hover."
+  }
+}
