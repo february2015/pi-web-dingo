@@ -22,9 +22,11 @@ session needs your input and jump to it without clicking around.
 
 ## Install
 
-This extension targets the **pi dashboard running on
-`http://localhost:8000`** (or `http://127.0.0.1:8000`). Make sure your
-local dashboard is up before installing.
+The extension **auto-detects any pi dashboard page** by probing its
+`/api/sessions` endpoint on load — so it works whether the dashboard
+runs on `http://localhost:8000`, an internal IP, or a public tunnel
+(FRP, ngrok, Cloudflare, etc.). No manifest edits needed when the
+port or hostname changes.
 
 ### Option A — load the prebuilt `dist/` (recommended for users)
 
@@ -105,10 +107,13 @@ extension from `chrome://extensions`.
 
 ## Configuration
 
-The extension matches `http://localhost:8000` and
-`http://127.0.0.1:8000` by default. To target a different port or
-hostname, edit the `matches` and `host_permissions` arrays in
-`public/manifest.json` and rebuild.
+The extension probes `/api/sessions` on every page load to detect the
+dashboard, so there is no port or hostname to configure. If the probe
+fails (no endpoint, wrong shape, CORS denial), the content script
+exits silently and the page is left untouched.
+
+If the dashboard ever moves to a different API path, edit
+`probeDashboard()` in `src/extension/content.tsx` and rebuild.
 
 ## License
 

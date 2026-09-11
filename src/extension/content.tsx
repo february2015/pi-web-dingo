@@ -1,18 +1,21 @@
 /**
  * Content script — entry point for the pi Web Dingo Chrome extension.
  *
- * When injected into a page (matches http://localhost:8000/* by default),
- * this script:
+ * Detection strategy:
+ *   1. The content script is injected on every page (`<all_urls>`),
+ *      because the dashboard can be reached via arbitrary hostnames /
+ *      ports / tunnels (localhost, 127.0.0.1, LAN IP, FRP-mapped
+ *      domain, etc.) and we don't want users to have to edit the
+ *      manifest for every setup.
+ *   2. Before mounting, we probe the dashboard's REST API at
+ *      `${origin}/api/sessions`. A successful response with a
+ *      `sessions` array confirms we're on a pi dashboard. Anything
+ *      else (timeout, 404, CORS denial, HTML login page) is treated
+ *      as "not the dashboard" and the content script silently exits
+ *      without touching the page.
  *
- *   1. Creates a Shadow DOM host on `document.body` so dingo's CSS does
- *      not collide with the dashboard's styles.
- *   2. Mounts the React app into that shadow root.
- *   3. Connects to the extension's background service worker via
- *      `chrome.runtime.connect`, asking it to start streaming sessions
- *      from the dashboard.
- *
- * The actual UI rendering (panel, chip, audio bridge) happens inside
- * `src/client/index.tsx`.
+ * Once mounted, the React app (`src/client/index.tsx`) lives inside
+ * a Shadow DOM so its CSS cannot collide with the dashboard's styles.
  */
 import { createRoot, type Root } from "react-dom/client";
 import * as React from "react";
@@ -20,14 +23,48 @@ import { App } from "../client/index.js";
 import { startDingoStore, stopDingoStore } from "../client/useDingoStore.js";
 
 const HOST_ID = "pi-web-dingo-host";
-const DASHBOARD_URL = (() => {
-  if (typeof window === "undefined") return "http://localhost:8000";
-  return `${window.location.protocol}//${window.location.host}`;
-})();
+const PROBE_TIMEOUT_MS = 3_000;
 
 let root: Root | null = null;
 
-function mount(): void {
+function getOrigin(): string {
+  if (typeof window === "undefined") return "http://localhost:8000";
+  return `${window.location.protocol}//${window.location.host}`;
+}
+
+/**
+ * Probe the dashboard's REST API. Returns true only when the endpoint
+ * responds with a JSON object/array containing a `sessions` field.
+ * Anything else (HTML, empty body, 401/403/404, CORS rejection) is
+ * treated as "not the dashboard".
+ */
+async function probeDashboard(origin: string): Promise<boolean> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${origin}/api/sessions`, {
+      credentials: "include",
+      signal: controller.signal,
+    });
+    if (!res.ok) return false;
+    const text = await res.text();
+    if (!text) return false;
+    let parsed: unknown;
+    try { parsed = JSON.parse(text); } catch { return false; }
+    if (Array.isArray(parsed)) return true;
+    if (parsed && typeof parsed === "object") {
+      const obj = parsed as Record<string, unknown>;
+      return Array.isArray(obj.sessions);
+    }
+    return false;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function mount(dashboardUrl: string): void {
   if (document.getElementById(HOST_ID)) return;
 
   // Create the host element
@@ -64,10 +101,10 @@ function mount(): void {
 
   // React 18 root API
   root = createRoot(mountPoint);
-  root.render(React.createElement(App, { dashboardUrl: DASHBOARD_URL }));
+  root.render(React.createElement(App, { dashboardUrl }));
 
   // Start the background service worker stream
-  startDingoStore(DASHBOARD_URL);
+  startDingoStore(dashboardUrl);
 }
 
 function unmount(): void {
@@ -77,7 +114,17 @@ function unmount(): void {
   document.getElementById(HOST_ID)?.remove();
 }
 
-mount();
+async function bootstrap(): Promise<void> {
+  const origin = getOrigin();
+  const ok = await probeDashboard(origin);
+  if (!ok) {
+    // Not a pi dashboard — leave the page untouched.
+    return;
+  }
+  mount(origin);
+}
+
+void bootstrap();
 
 // Clean up if the page is being torn down (rare for SPAs but good hygiene)
 window.addEventListener("pagehide", unmount);

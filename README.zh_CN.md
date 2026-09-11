@@ -16,7 +16,9 @@
 
 ## 安装
 
-扩展默认监听运行在 **`http://localhost:8000`**（或 `http://127.0.0.1:8000`）的 pi dashboard。安装前请确保本地 dashboard 已启动。
+扩展会在加载时**自动探测**任意页面上的 pi dashboard —— 通过请求 `${origin}/api/sessions` 验证。dashboard 跑在 `http://localhost:8000`、内网 IP、或者公网隧道（FRP、ngrok、Cloudflare 等）都能识别。**端口或域名变了不用改 manifest**。
+
+确认本地 dashboard 已启动后，再按下面方式加载扩展。
 
 ### 方式 A —— 加载预编译的 `dist/`（推荐普通用户使用）
 
@@ -90,7 +92,9 @@ npm run preview   # 预览生产构建
 
 ## 配置
 
-默认匹配 `http://localhost:8000` 和 `http://127.0.0.1:8000`。要切换到其他端口或域名，编辑 `public/manifest.json` 里的 `matches` 和 `host_permissions` 数组，然后重新构建。
+扩展在每个页面加载时探测 `/api/sessions` 来识别 dashboard，**不需要配置端口或域名**。如果探测失败（端点不存在、返回格式不对、CORS 拒绝），content script 会静默退出，页面不受影响。
+
+如果以后 dashboard 改用别的 API 路径，改 `src/extension/content.tsx` 里的 `probeDashboard()` 然后重新构建。
 
 ## 许可证
 
