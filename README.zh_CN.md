@@ -22,25 +22,39 @@
 
 ### 方式 A —— 加载预编译的 `dist/`（推荐普通用户使用）
 
-仓库自带可直接加载的 `dist/` 目录。
+仓库自带可直接加载的 `dist/` 目录。**不需要 Node.js 或构建步骤**。
 
-1. 下载或 clone 本仓库。
-2. 在 Chrome 中打开 `chrome://extensions`。
-3. 打开右上角的 **开发者模式** 开关。
-4. 点击 **加载已解压的扩展程序**。
-5. 选择仓库里的 `dist/` 文件夹。
-6. 在 Chrome 工具栏拼图图标里把扩展钉住，🐕 图标就会一直显示。
+1. **获取代码**。两种方式二选一：
+   - git clone：
+     ```bash
+     git clone https://github.com/february2015/pi-web-dingo.git
+     ```
+   - 或者从 [Releases](https://github.com/february2015/pi-web-dingo/releases) 下载某个 tag 解压。
+
+2. **确认本地 dashboard 已启动**。扩展只有在能访问 `/api/sessions` 时才会激活。先启动 dashboard（默认 `http://localhost:8000`），再在 Chrome 里打开它。
+
+3. **打开 Chrome 扩展页**。新标签页访问 `chrome://extensions`。
+
+4. **打开开发者模式**。在该页面右上角打开开关。
+
+5. **加载已解压的扩展**。点击出现的 **加载已解压的扩展程序** 按钮，选择仓库里的 `dist/` 文件夹（里面直接包含 `manifest.json`）。
+
+6. **钉住扩展**。点击 Chrome 工具栏的拼图图标，找到 **pi Web Dingo**，点旁边的图钉让药丸跨刷新可见。
+
+7. **打开 dashboard**。访问 pi dashboard（比如 `http://localhost:8000`）。药丸应该在 ~1 秒内出现在右上角。如果没出现，看下面的 [故障排查](#故障排查)。
 
 ### 方式 B —— 从源码构建（推荐贡献者）
 
+如果你要修改扩展源码并让改动体现在加载的 `dist/` 里，走这条路。
+
 ```bash
-git clone https://github.com/<your-username>/pi-web-dingo.git
+git clone https://github.com/february2015/pi-web-dingo.git
 cd pi-web-dingo
 npm install
 npm run build
 ```
 
-然后按方式 A 加载 `dist/`。
+然后按方式 A 加载 `dist/`。每次改完源码都要再跑一次 `npm run build`，然后在 `chrome://extensions` 页面点扩展的 **重新加载** 按钮。
 
 ## 使用
 
@@ -79,6 +93,23 @@ pi-web-dingo/
 ├── vite.config.ts        # Vite 构建 + 静态资源拷贝
 └── package.json
 ```
+
+## 故障排查
+
+**dashboard 上看不到药丸。**
+在 dashboard 标签页按 F12 打开 DevTools → Console，然后刷新页面。如果完全看不到 `[dingo]` 日志，说明 content script 没加载——检查 `chrome://extensions` 是否有报错，并确认开发者模式已打开。如果看到 `[dingo] probe ...` 后面跟 `probe= false`，说明 dashboard 的 `/api/sessions` 没返回可识别的响应（HTTP 错误、HTML 登录页、或非 JSON）。先启动 dashboard，再刷新页面。
+
+**"Manifest version 3 is not supported" 或类似加载错误。**
+Chrome 版本太旧（MV3 需要 Chrome 88+）。升级 Chrome，或用 1.0 之前的 manifest。
+
+**药丸位置不对 / 被 dashboard UI 遮住。**
+沿视口右边缘拖动到任意位置，位置会按浏览器保存。如果药丸被模态框遮住，先点 dashboard 关掉模态框。
+
+**`git pull` 后改动没生效。**
+在 `chrome://extensions` 上点本扩展的 **重新加载** 图标。Chrome 把加载的版本和文件内容分开缓存。
+
+**状态计数看起来过时。**
+扩展每 5 秒轮询 `/api/sessions` 作为兑底。如果几秒后还没更新，另开一个 dashboard 标签看看——可能是 dashboard 服务本身记录变更较慢。
 
 ## 开发
 

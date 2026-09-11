@@ -30,26 +30,56 @@ port or hostname changes.
 
 ### Option A — load the prebuilt `dist/` (recommended for users)
 
-The repository ships a ready-to-load `dist/` folder.
+The repository ships a ready-to-load `dist/` folder. You don't need
+Node.js or any build step.
 
-1. Download or clone this repository.
-2. Open `chrome://extensions` in Chrome.
-3. Toggle **Developer mode** on (top right).
-4. Click **Load unpacked**.
-5. Select the `dist/` folder inside this repo.
-6. Pin the extension (puzzle-piece icon → pin 🐕) so the pill stays
-   visible.
+1. **Get the code.** Either:
+   - Clone with git:
+     ```bash
+     git clone https://github.com/february2015/pi-web-dingo.git
+     ```
+   - Or download a tag from
+     [Releases](https://github.com/february2015/pi-web-dingo/releases)
+     and unzip it.
+
+2. **Make sure your pi dashboard is running.** The extension only
+   activates when it can reach `/api/sessions`. Start the dashboard
+   (default: `http://localhost:8000`) before opening it in Chrome.
+
+3. **Open Chrome's extension page.** Navigate to
+   `chrome://extensions` in a new tab.
+
+4. **Turn on Developer mode.** Toggle the switch in the top-right
+   corner of that page.
+
+5. **Load the unpacked extension.** Click the **Load unpacked**
+   button that appears, then select the `dist/` folder inside this
+   repo (the one that contains `manifest.json` directly).
+
+6. **Pin the extension.** Click the puzzle-piece icon in the
+   Chrome toolbar, then click the pin next to **pi Web Dingo** so
+   the pill stays visible across browser restarts.
+
+7. **Open the dashboard.** Navigate to your pi dashboard
+   (e.g. `http://localhost:8000`). The pill should appear in the
+   top-right within ~1 second. If it doesn't, see
+   [Troubleshooting](#troubleshooting) below.
 
 ### Option B — build from source (for contributors)
 
+Use this if you're modifying the extension and want your changes
+reflected in the loaded `dist/`.
+
 ```bash
-git clone https://github.com/<you>/pi-web-dingo.git
+git clone https://github.com/february2015/pi-web-dingo.git
 cd pi-web-dingo
 npm install
 npm run build
 ```
 
-Then load `dist/` as in Option A.
+Then load `dist/` as in Option A. After every source change, run
+`npm run build` again and click the **Reload** icon on
+`chrome://extensions` for the extension.
 
 ## Usage
 
@@ -92,6 +122,37 @@ pi-web-dingo/
 ├── vite.config.ts        # Vite build + asset copy
 └── package.json
 ```
+
+## Troubleshooting
+
+**Pill doesn't appear on the dashboard.**
+Open DevTools on the dashboard tab (F12 → Console), then refresh the
+page. If you don't see any `[dingo]` log lines, the content script
+didn't load — check `chrome://extensions` for errors and make sure
+Developer mode is on. If you see `[dingo] probe ...` followed by
+`probe= false`, the dashboard's `/api/sessions` endpoint didn't return
+a recognizable shape (HTTP error, HTML login page, or non-JSON
+payload). Start the dashboard first, then refresh.
+
+**"Manifest version 3 is not supported" or similar load error.**
+You're using an outdated Chrome (MV3 needs Chrome 88+). Update Chrome
+or use the pre-1.0 manifest.
+
+**Pill is in the wrong place / hidden behind dashboard UI.**
+Drag it anywhere along the right edge of the viewport. Position is
+saved per-browser. If the pill is behind a modal, click the
+dashboard to dismiss the modal first.
+
+**Updates after `git pull` don't take effect.**
+Click the **Reload** icon on `chrome://extensions` for this
+extension. Chrome caches the loaded version separately from the file
+contents.
+
+**Status counts look stale.**
+The extension polls `/api/sessions` every 5 seconds as a fallback. If
+counts don't update after a few seconds, open the dashboard in
+another tab — the dashboard server itself may be slow to record the
+change.
 
 ## Development
 
